@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" aria-hidden="true"><defs><clipPath id="fvc"><path d="M24 2.5L43.5 10v14c0 11.5-8.6 18.8-19.5 21.5C13.1 42.8 4.5 35.5 4.5 24V10z"/></clipPath><linearGradient id="fvg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1C4A60"/><stop offset="1" stop-color="#0B2230"/></linearGradient><radialGradient id="fvs" cx="24" cy="21" r="20" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#E39B2E" stop-opacity=".75"/><stop offset="1" stop-color="#E39B2E" stop-opacity="0"/></radialGradient></defs>
+<path d="M24 2.5L43.5 10v14c0 11.5-8.6 18.8-19.5 21.5C13.1 42.8 4.5 35.5 4.5 24V10z" fill="url(#fvg)"/>
+<g clip-path="url(#fvc)"><path class="sweep" d="M24 21L24 1A20 20 0 0 1 41.3 11z" fill="url(#fvs)"/>
+<path d="M2 35l9-10 5 5 8-12 7 9 4-4 11 12v14H2z" fill="#2F6B4F"/><path d="M2 38l9-7 5 4 8-9 7 7 4-3 11 9v14H2z" fill="#1F5138"/>
+<path d="M0 43c8-4 14 1 21-2s14-6 27-3" fill="none" stroke="#5FA8C8" stroke-width="2.6" stroke-linecap="round"/></g>
+<path d="M18.5 16a7.5 7.5 0 0 1 11 0M15.5 12.5a12 12 0 0 1 17 0" fill="none" stroke="#E39B2E" stroke-width="1.6" stroke-linecap="round" opacity=".9"/>
+<circle class="eye" cx="24" cy="21" r="2.8" fill="#E39B2E"/>
+<path d="M24 2.5L43.5 10v14c0 11.5-8.6 18.8-19.5 21.5C13.1 42.8 4.5 35.5 4.5 24V10z" fill="none" stroke="#E39B2E" stroke-width="1.7"/></svg>

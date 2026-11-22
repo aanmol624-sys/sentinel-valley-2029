@@ -73,6 +73,26 @@ function drawTree(){const tree=document.getElementById('tree');const by={};BUDGE
 function initSim(){const r=document.getElementById('simday');const upd=()=>{const d=+r.value;document.getElementById('daylabel').textContent=d===0?'Day 0':'Day '+d;
   document.querySelectorAll('.sim li').forEach(li=>li.classList.toggle('shown',+li.dataset.d<=d));};r.oninput=upd;upd();}
 
+// ===== Navigation: chapter drop-downs, mobile menu, reading progress, bar fills =====
+(()=>{
+const root=document.documentElement,tog=document.querySelector('.navtoggle');
+if(tog)tog.addEventListener('click',()=>{const o=root.classList.toggle('nav-open');tog.setAttribute('aria-expanded',o);tog.setAttribute('aria-label',o?'Close menu':'Open menu');});
+const grps=[...document.querySelectorAll('nav.main .grp')];
+const close=except=>grps.forEach(g=>{if(g!==except){g.classList.remove('open');g.firstElementChild.setAttribute('aria-expanded','false');}});
+grps.forEach(g=>{const b=g.firstElementChild;
+  b.addEventListener('click',()=>{const o=!g.classList.contains('open');close(g);g.classList.toggle('open',o);b.setAttribute('aria-expanded',o);});
+  g.addEventListener('mouseleave',()=>{g.classList.remove('open');b.setAttribute('aria-expanded','false');});});
+document.addEventListener('click',e=>{if(!e.target.closest('nav.main'))close();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){close();root.classList.remove('nav-open');if(tog)tog.setAttribute('aria-expanded','false');}});
+const bar=document.querySelector('.progress i');
+const upd=()=>{const m=document.documentElement.scrollHeight-innerHeight;if(bar)bar.style.setProperty('--p',m>0?(scrollY/m).toFixed(4):0);};
+addEventListener('scroll',upd,{passive:true});upd();
+// horizontal bars grow when they scroll into view
+if('IntersectionObserver' in window&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.remove('fx-pre');io.unobserve(e.target);}}),{rootMargin:'0px 0px -10% 0px'});
+  document.querySelectorAll('.bars').forEach(b=>{b.classList.add('fx-pre');io.observe(b);});}
+})();
+
 // ===== Depth layer: 3D valley background, hero camera, tilt cards, scroll reveals =====
 (()=>{
 const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -142,12 +162,13 @@ if(!calm&&'IntersectionObserver' in window){
   const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;const el=e.target;io.unobserve(el);el.classList.add('in');
     const done=ev=>{if(ev.target!==el||ev.propertyName!=='transform')return;el.removeEventListener('transitionend',done);el.classList.remove('fx-reveal','in');el.style.removeProperty('--rd');};
     el.addEventListener('transitionend',done);}),{rootMargin:'0px 0px -8% 0px'});
-  document.querySelectorAll('main h2, .panel, .fact, .pillars>div, .tablewrap, main>table, .read>table, figure, .gantt, .tree, .note, .covers, .sim .lane, .topics').forEach(el=>{
+  document.querySelectorAll('.sec-head, .card, .pillars>div, .tablewrap, figure, .note, .quote, .banner, .flow>li, .tile, .wbs, .swot .q, .heatwrap, .trk, .memo, .doc, .steps>li, .chain, .bars, .stack, .kpis.light .kpi, .chapter, .topics li, .pyr>div, .sim .lane, .simctl, .pager a').forEach(el=>{
+    if(el.closest('.phero'))return;
     const sib=[...el.parentElement.children].indexOf(el);el.style.setProperty('--rd',Math.min(sib,6)*70+'ms');
     el.classList.add('fx-reveal');io.observe(el);});}
 
 // 4. Cards tilt toward the cursor with a moving glare
-if(!calm&&fine)document.querySelectorAll('.fact, .panel, .pillars>div').forEach(el=>{el.classList.add('fx-tilt');
+if(!calm&&fine)document.querySelectorAll('.card:not(.static), .pillars>div, .tile, .swot .q, .chapter, .kpis.light .kpi').forEach(el=>{el.classList.add('fx-tilt');
   el.addEventListener('pointermove',e=>{if(el.classList.contains('fx-reveal'))return;const r=el.getBoundingClientRect();
     const x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height,k=Math.min(1,340/r.width);
     el.classList.add('hot');el.style.transform=`perspective(800px) rotateX(${((.5-y)*10*k).toFixed(2)}deg) rotateY(${((x-.5)*12*k).toFixed(2)}deg) translateZ(14px)`;
