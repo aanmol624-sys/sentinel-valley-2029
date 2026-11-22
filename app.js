@@ -73,10 +73,84 @@ function drawTree(){const tree=document.getElementById('tree');const by={};BUDGE
 function initSim(){const r=document.getElementById('simday');const upd=()=>{const d=+r.value;document.getElementById('daylabel').textContent=d===0?'Day 0':'Day '+d;
   document.querySelectorAll('.sim li').forEach(li=>li.classList.toggle('shown',+li.dataset.d<=d));};r.oninput=upd;upd();}
 
-// 3D valley map: gentle tilt toward the pointer (fine pointers only, respects reduced motion)
-(()=>{const m=document.querySelector('.map3d');if(!m)return;const t=m.querySelector('.terrain');
- const calm=matchMedia('(prefers-reduced-motion: reduce)').matches, fine=matchMedia('(pointer:fine)').matches;
- if(calm||!fine)return;let raf=0;
- m.addEventListener('pointermove',e=>{const r=m.getBoundingClientRect();const x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;
-  cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{t.style.setProperty('--rx',(52-y*14).toFixed(2)+'deg');t.style.setProperty('--rz',(-9+x*16).toFixed(2)+'deg');});});
- m.addEventListener('pointerleave',()=>{t.style.setProperty('--rx','52deg');t.style.setProperty('--rz','-9deg');});})();
+// ===== Depth layer: 3D valley background, hero camera, tilt cards, scroll reveals =====
+(()=>{
+const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fine=matchMedia('(pointer:fine)').matches;
+const ptr={x:0,y:0};
+addEventListener('pointermove',e=>{ptr.x=e.clientX/innerWidth-.5;ptr.y=e.clientY/innerHeight-.5;},{passive:true});
+let scrollF=0;
+const onScroll=()=>{const max=document.documentElement.scrollHeight-innerHeight;scrollF=max>0?scrollY/max:0;};
+addEventListener('scroll',onScroll,{passive:true});onScroll();
+
+// 1. Wireframe valley flying behind every page
+const cv=document.createElement('canvas');cv.id='depth-bg';cv.setAttribute('aria-hidden','true');document.body.prepend(cv);
+const ctx=cv.getContext('2d');let W=0,H=0,dpr=1;
+const size=()=>{dpr=Math.min(devicePixelRatio||1,1.5);W=cv.width=Math.round(innerWidth*dpr);H=cv.height=Math.round(innerHeight*dpr);};
+size();
+const SPAN=7,DEPTH=26,LOOP=40,INK='15,42,58',AMB='227,155,46';
+const hgt=(x,z)=>{const river=Math.sin(z*.22)*1.1+Math.sin(z*.07)*1.6,d=Math.abs(x-river);
+  const n=Math.sin(x*1.7+z*.9)*.18+Math.sin(x*.6-z*1.3)*.22+Math.sin(z*.45+x*2.9)*.08;
+  return Math.pow(Math.max(0,d-.6),1.5)*.55*(1+n*1.5)+n*.4;};
+const sites=[[-1.5,6],[1.2,11],[-.4,15],[2.2,19],[-2.4,23],[.6,27],[-1,31],[1.8,36]];
+let camX=0,camY=2.6;
+function draw(time){
+  const small=innerWidth<700,cols=small?32:56,rows=small?32:46,dz=DEPTH/rows;
+  const travel=time*.00042,base=Math.floor(travel/dz)*dz;
+  camX+=(ptr.x*1.4-camX)*.04;camY+=((2.5+scrollF*1.6-ptr.y*.5)-camY)*.04;
+  const f=Math.max(W,H*1.2)*.62,hx=W/2,hy=H*.4,proj=(x,y,rel)=>[hx+(x-camX)*f/rel,hy+(camY-y)*f/rel];
+  ctx.clearRect(0,0,W,H);ctx.lineWidth=dpr;
+  const pts=[];
+  for(let i=0;i<=rows;i++){const zw=base+i*dz,rel=zw-travel+.9;if(rel<.15){pts.push(null);continue;}
+    const a=Math.pow(Math.max(0,1-rel/(DEPTH+1)),1.4)*Math.pow(Math.min(1,(rel-.15)/4),1.5);
+    const xs=new Float32Array(cols+1),ys=new Float32Array(cols+1);
+    for(let j=0;j<=cols;j++){const x=-SPAN+j*2*SPAN/cols,p=proj(x,hgt(x,zw),rel);xs[j]=p[0];ys[j]=p[1];}
+    pts.push({a,xs,ys});}
+  for(let i=0;i<pts.length;i++){const p=pts[i];if(!p)continue;
+    ctx.strokeStyle=`rgba(${INK},${(p.a*.16).toFixed(3)})`;ctx.beginPath();ctx.moveTo(p.xs[0],p.ys[0]);
+    for(let j=1;j<=cols;j++)ctx.lineTo(p.xs[j],p.ys[j]);
+    const q=pts[i+1];if(q)for(let j=0;j<=cols;j++){ctx.moveTo(p.xs[j],p.ys[j]);ctx.lineTo(q.xs[j],q.ys[j]);}
+    ctx.stroke();}
+  sites.forEach(([x,z],k)=>{const zw=z+Math.ceil((travel+.6-z)/LOOP)*LOOP,rel=zw-travel+.9;if(rel>DEPTH)return;
+    const a=Math.pow(1-rel/(DEPTH+1),1.2)*Math.pow(Math.min(1,(rel-.6)/4),1.5);if(a<=0)return;
+    const y=hgt(x,zw),g=proj(x,y,rel),tp=proj(x,y+.9,rel),r=Math.min(4*dpr,Math.max(1.2*dpr,.05*f/rel)),ph=(time*.0005+k*.37)%1;
+    ctx.strokeStyle=`rgba(${AMB},${(a*.55).toFixed(3)})`;ctx.beginPath();ctx.moveTo(g[0],g[1]);ctx.lineTo(tp[0],tp[1]);ctx.stroke();
+    ctx.fillStyle=`rgba(${AMB},${(a*.85).toFixed(3)})`;ctx.beginPath();ctx.arc(tp[0],tp[1],r,0,7);ctx.fill();
+    ctx.strokeStyle=`rgba(${AMB},${(a*(1-ph)*.6).toFixed(3)})`;ctx.beginPath();ctx.arc(tp[0],tp[1],r*(1+ph*4),0,7);ctx.stroke();});
+}
+
+// 2. Hero map camera: smoothed pointer tilt, idle drift, tips back as you scroll past
+let heroTick=null;
+const m=document.querySelector('.map3d');
+if(m&&!calm){const t=m.querySelector('.terrain'),cs=getComputedStyle(t);
+  const rx0=parseFloat(cs.getPropertyValue('--rx'))||52,rz0=parseFloat(cs.getPropertyValue('--rz'))||-9;
+  let cx=rx0,cz=rz0,tx=rx0,tz=rz0,over=false;m.classList.add('live');
+  if(fine){m.addEventListener('pointermove',e=>{const r=m.getBoundingClientRect();over=true;
+      tx=rx0-((e.clientY-r.top)/r.height-.5)*18;tz=rz0+((e.clientX-r.left)/r.width-.5)*24;});
+    m.addEventListener('pointerleave',()=>{over=false;});}
+  heroTick=time=>{const r=m.getBoundingClientRect();if(r.bottom<0||r.top>innerHeight)return;
+    if(!over){tx=rx0+Math.sin(time*.0004)*3;tz=rz0+Math.sin(time*.00025)*6;}
+    const sc=Math.min(1,Math.max(0,scrollY/(r.top+scrollY+r.height)));
+    cx+=(tx+sc*16-cx)*.08;cz+=(tz-cz)*.08;
+    t.style.setProperty('--rx',cx.toFixed(2)+'deg');t.style.setProperty('--rz',cz.toFixed(2)+'deg');};}
+
+if(calm){draw(8000);addEventListener('resize',()=>{size();draw(8000);});}
+else{addEventListener('resize',size);const loop=time=>{draw(time);if(heroTick)heroTick(time);requestAnimationFrame(loop);};requestAnimationFrame(loop);}
+
+// 3. Sections fold up into place as they scroll into view
+if(!calm&&'IntersectionObserver' in window){
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;const el=e.target;io.unobserve(el);el.classList.add('in');
+    const done=ev=>{if(ev.target!==el||ev.propertyName!=='transform')return;el.removeEventListener('transitionend',done);el.classList.remove('fx-reveal','in');el.style.removeProperty('--rd');};
+    el.addEventListener('transitionend',done);}),{rootMargin:'0px 0px -8% 0px'});
+  document.querySelectorAll('main h2, .panel, .fact, .pillars>div, .tablewrap, main>table, .read>table, figure, .gantt, .tree, .note, .covers, .sim .lane, .topics').forEach(el=>{
+    const sib=[...el.parentElement.children].indexOf(el);el.style.setProperty('--rd',Math.min(sib,6)*70+'ms');
+    el.classList.add('fx-reveal');io.observe(el);});}
+
+// 4. Cards tilt toward the cursor with a moving glare
+if(!calm&&fine)document.querySelectorAll('.fact, .panel, .pillars>div').forEach(el=>{el.classList.add('fx-tilt');
+  el.addEventListener('pointermove',e=>{if(el.classList.contains('fx-reveal'))return;const r=el.getBoundingClientRect();
+    const x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height,k=Math.min(1,340/r.width);
+    el.classList.add('hot');el.style.transform=`perspective(800px) rotateX(${((.5-y)*10*k).toFixed(2)}deg) rotateY(${((x-.5)*12*k).toFixed(2)}deg) translateZ(14px)`;
+    el.style.setProperty('--gx',(x*100).toFixed(1)+'%');el.style.setProperty('--gy',(y*100).toFixed(1)+'%');});
+  el.addEventListener('pointerleave',()=>{el.classList.remove('hot');el.style.transform='';});});
+})();
