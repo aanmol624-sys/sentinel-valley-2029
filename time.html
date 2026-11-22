@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>Time | Sentinel Valley 2029</title><meta content="Time management and Gantt chart" name="description"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&amp;family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&amp;display=swap" rel="stylesheet"/>
+<link href="style.css" rel="stylesheet"/></head><body><a class="skip" href="#main">Skip to content</a>
+<header class="site"><div class="bar"><a class="brand" href="index.html"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M2 20 L8 9 L12 14 L16 6 L22 20Z" fill="none" stroke="#fff" stroke-width="2"></path><circle cx="16" cy="6" fill="#E39B2E" r="2.6"></circle></svg>Sentinel Valley 2029</a>
+<nav aria-label="Main" class="main"><a href="index.html">Home</a><a href="why.html">Why</a><a href="charter.html">Charter</a><a href="scope.html">Scope</a><a aria-current="page" href="time.html">Time</a><a href="cost.html">Cost</a><a href="organization.html">Organization</a><a href="people.html">People</a><a href="quality.html">Quality</a><a href="stakeholders.html">Stakeholders</a><a href="risk.html">Risk &amp; procurement</a><a href="closing.html">Closing</a><a href="simulation.html">Day 0</a><a href="references.html">References</a></nav></div></header><main id="main"><div class="read"><h1>Time: schedule and Gantt chart</h1><div class="covers">Course topics on this page: <a href="time.html">1. Time</a></div>
+<p class="lede">The work runs from January 4, 2027 to a formal close on December 31,
+2029. The system goes live on October 1, 2029, which leaves three months
+for closing.</p></div>
+<div aria-label="Filter the Gantt chart" class="btnrow" role="group">
+<button aria-pressed="true" class="chip" data-g="" onclick="setG(this,'all')">All work</button>
+<button aria-pressed="false" class="chip" data-g="" onclick="setG(this,'crit')">Critical path</button>
+<button aria-pressed="false" class="chip" data-g="" onclick="setG(this,'SENSE')">SENSE</button>
+<button aria-pressed="false" class="chip" data-g="" onclick="setG(this,'SIMULATE')">SIMULATE</button>
+<button aria-pressed="false" class="chip" data-g="" onclick="setG(this,'SHIELD')">SHIELD</button>
+<button aria-pressed="false" class="chip" data-g="" onclick="setG(this,'SUPPLY')">SUPPLY</button>
+<button aria-pressed="false" class="chip" data-g="" onclick="setG(this,'SUSTAIN')">SUSTAIN</button></div>
+<figure><div class="gantt" id="gantt"></div>
+<div class="legend"><span><i style="background:#0F2A3A"></i>Initiating, planning, closing</span><span><i style="background:#6B7A83"></i>Procurement</span><span><i style="background:#2F6B4F"></i>SENSE</span><span><i style="background:#3A6EA5"></i>SIMULATE</span><span><i style="background:#4E9C93"></i>SHIELD</span><span><i style="background:#A8792E"></i>SUPPLY</span><span><i style="background:#7A5C8E"></i>SUSTAIN</span><span><i style="background:#C0392B"></i>Testing</span><span><i style="background:#E39B2E"></i>Milestone / amber outline = critical path</span></div>
+<figcaption>Gantt chart of 34 activities and milestones. Hover a bar to see its exact dates. Use the buttons to show only the critical path or one pillar. For how the pillars work together during an outbreak, see the <a href="simulation.html">response flowchart on the Day 0 page</a>.</figcaption></figure>
+<div class="read"><h2>How the schedule was built</h2>
+<p>Scheduling followed the seven steps from the lectures: plan schedule
+management, define activities, sequence them, estimate resources,
+estimate durations, develop the schedule and control it (Renso,
+2026).</p>
+<h3>Dependencies</h3>
+<ul><li><b>Mandatory (hard logic):</b> the depot must be built (7.2) before the stockpile can move in (7.3). Integrated testing (9.1) cannot start until the systems exist.</li>
+<li><b>Discretionary:</b> I chose to finish privacy impact assessments (2.2) before any data work on the digital twin begins, even though design could technically overlap.</li>
+<li><strong>External:</strong> school HVAC work can only happen in July
+and August, when students are away. So SHIELD work is split into two
+summer waves (6.2a and 6.2b).</li></ul>
+<h3>The critical path</h3>
+<p>The longest chain of dependent work is: charter, then requirements,
+then detailed design, then baseline approval, then procurement, then
+depot land, depot construction, stockpile, integrated testing, Operation
+Sentinel, go-live and closing. Any delay on this chain delays the whole
+project. The PMO tracks it weekly, and the depot contract has
+late-delivery penalties. Click "Critical path" above to see it.</p>
+<h3>SMART milestones</h3>
+<p>Milestones on a Gantt chart should be specific, measurable, assignable, realistic and time-framed (Renso, 2026):</p></div>
+<div class="tablewrap"><table><thead><tr><th>Milestone</th><th>Date</th><th>Measured by</th><th>Owner</th></tr></thead><tbody>
+<tr><td>M1 Charter approved</td><td>Feb 26, 2027</td><td>Four signatures on the charter</td><td>Champion</td></tr>
+<tr><td>M2 Baseline plan approved (kill point)</td><td>Sep 3, 2027</td><td>Steering committee vote: continue, redirect or stop</td><td>PM</td></tr>
+<tr><td>M3 Major contracts awarded</td><td>Nov 30, 2027</td><td>Signed contracts for depot, lab, HVAC, compute</td><td>Procurement lead</td></tr>
+<tr><td>M4 Go-live</td><td>Oct 1, 2029</td><td>Operation Sentinel passed; alert issued within 72 hours</td><td>Sponsor</td></tr>
+<tr><td>M5 Project closed</td><td>Dec 31, 2029</td><td>All deliverables accepted, contracts closed, lessons learned filed</td><td>PM</td></tr></tbody></table></div>
+<div class="read"><h3>PERT estimate and project buffer</h3>
+<p>Estimates are uncertain, so a project buffer should always exist
+(Renso, 2026). For the riskiest task, depot construction, I used PERT:
+optimistic 10 months, most likely 13 months, pessimistic 19 months. The
+PERT estimate is (10 + 4×13 + 19) ÷ 6 = 13.5 months, which is the
+duration planned on the chart. Go-live is three months before the hard
+close date, and that gap is the project buffer.</p>
+<h3>Controlling the schedule</h3>
+<p>If a team misses a deadline, I act within five working days (Renso,
+2026). A slipped milestone triggers a recovery plan: re-sequencing,
+adding temporary staff, or using contingency funds. If two milestones
+slip in a row, the issue goes to the steering committee.</p></div></main>
+<footer class="site"><div>Sentinel Valley 2029 is a CIS 385 project proposal for Chacha &amp; the University of the Fraser Valley, written by Anmol, fall 2026. The $1 billion investment is a course scenario; every other fact is cited. <a href="references.html">References and AI-use statement</a>.</div></footer>
+<script src="budget.js"></script><script src="app.js"></script></body></html>
