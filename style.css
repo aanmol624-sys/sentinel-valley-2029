@@ -698,3 +698,6 @@ nav.main .homelink .i{width:16px;height:16px}
 @media (max-width:1400px) and (min-width:1061px){nav.main .homelink{padding:.5rem .55rem}}
 @media (max-width:1240px) and (min-width:1061px){nav.main .homelink{font-size:0;gap:0}nav.main .homelink .i{width:18px;height:18px}}
 @media (max-width:1060px){nav.main .homelink{font-size:1rem;padding:.8rem .6rem;color:#fff}}@media (max-width:1400px) and (min-width:1061px){.brand .word small{display:none}header.site .bar{gap:.6rem}.grp>button,nav.main .solo{padding:.5rem .6rem}.cta{padding:.55rem .85rem;margin-left:.2rem}}
+/* wide items reveal with a slide only (a 3D tilt would push them past the page edge); never allow sideways scroll */
+html{overflow-x:clip}
+:is(figure,.tablewrap,.gantt,.tree,.stack,.doc,.trk,.heatwrap,.memo,.swot,.wbs).fx-reveal:not(.in){transform:translateY(36px)}
