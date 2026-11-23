@@ -175,6 +175,144 @@ document.querySelectorAll('[data-jump]').forEach(a=>a.addEventListener('click',e
   const g=list.querySelector(`[data-letter="${a.dataset.jump}"]`);if(g)g.scrollIntoView({behavior:'smooth'});}));
 })();
 
+// ===== Visitor toolkit: glossary, section navigator, dock, site search, shortcuts, count-ups =====
+(()=>{
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+const svg=n=>`<svg class="i"><use href="#i-${n}"/></svg>`;
+
+// 1. Glossary: first use of each term on a page gets a plain-English definition on hover / tap
+const G=[['One Health','An approach that watches the health of people, animals and the environment together.'],
+['Disease X','WHO\u2019s name for an unknown pathogen that could cause a future pandemic.'],
+['spillover','When a virus jumps from animals to people.'],
+['digital twin','A computer model of the valley that simulates how an outbreak could spread and tests responses.'],
+['far-UVC','Short-wavelength (222 nm) ultraviolet light that inactivates airborne viruses in occupied rooms.'],
+['air changes per hour','How many times the air in a room is fully replaced each hour.'],
+['ROM','Rough order of magnitude: an early estimate made before the design exists.'],
+['CPI','Cost performance index = earned value \u00f7 actual cost. Below 1 means over budget.'],
+['PERT','Three-point estimate: (optimistic + 4 \u00d7 most likely + pessimistic) \u00f7 6.'],
+['WBS','Work breakdown structure: the project\u2019s work split into smaller, manageable pieces.'],
+['RFP','Request for proposal: vendors propose how they would meet the need.'],
+['RFQ','Request for quotation: vendors give a price for a clearly specified item.'],
+['MOUs','Memoranda of understanding: written agreements between partners.'],
+['PMO','Project management office: the team that runs the schedule, budget and reporting.'],
+['SMART','Specific, measurable, assignable, realistic and time-framed.'],
+['ISO/IEC 27001','The international standard for managing information security.'],
+['BSL-2','Biosafety level 2: lab containment for moderate-risk pathogens.'],
+['H5N1','A subtype of avian (bird) influenza virus.'],
+['CFIA','Canadian Food Inspection Agency: regulates animal health, including avian flu.'],
+['BCCDC','BC Centre for Disease Control.'],
+['PHAC','Public Health Agency of Canada.'],
+['CERB','Canada Emergency Response Benefit: the 2020 federal income-support program.'],
+['PPE','Personal protective equipment, such as masks, gloves and gowns.'],
+['FVRD','Fraser Valley Regional District.'],
+['MHO','Medical health officer: the official who can issue public-health orders.'],
+['DMAIC','Define, measure, analyze, improve, control: the Six Sigma improvement cycle.'],
+['earned value','The budgeted value of the work actually completed so far.'],
+['critical path','The longest chain of dependent tasks: a delay here delays the whole project.'],
+['kill point','A milestone where the project can be continued, redirected or stopped.'],
+['HVAC','Heating, ventilation and air conditioning.'],
+['FTE','Full-time equivalent: one person working full time for a year.'],
+['scope creep','Uncontrolled growth in what a project is expected to deliver.']];
+const main=$('main');
+if(main&&!$('#reflist')){
+  const skip='a,abbr,h1,h2,h3,button,label,kbd,.tldr,.phero,.mc,.vmap,.rapa,thead,svg,.chain,.flow b,.tile .id,.ptags';
+  G.forEach(([term,def])=>{
+    const re=new RegExp('(^|[^A-Za-z0-9-])('+term.replace(/[.*+?^${}()|[\]\\\/]/g,'\\$&')+')(?![A-Za-z0-9])',/[a-z]/.test(term)?'i':'');
+    const w=document.createTreeWalker(main,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement.closest(skip)?NodeFilter.FILTER_REJECT:re.test(n.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_SKIP});
+    const n=w.nextNode();if(!n)return;
+    const m=re.exec(n.nodeValue),start=m.index+m[1].length,mid=n.splitText(start);mid.splitText(term.length);
+    const ab=document.createElement('abbr');ab.className='gl';ab.tabIndex=0;ab.dataset.def=def;ab.textContent=mid.nodeValue;ab.setAttribute('aria-label',mid.nodeValue+': '+def);mid.replaceWith(ab);});
+  // one floating tooltip, positioned inside the viewport (never clipped by cards or tables)
+  const tip=document.createElement('div');tip.className='gltip';tip.setAttribute('role','tooltip');tip.id='gltip';document.body.appendChild(tip);let cur=null;
+  let shownAt=0;const show=a=>{shownAt=Date.now();cur=a;$$('abbr.gl.act').forEach(x=>x.classList.remove('act'));a.classList.add('act');a.setAttribute('aria-describedby','gltip');
+    tip.innerHTML='<b>'+a.textContent+'</b>'+a.dataset.def;tip.classList.add('on');const r=a.getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight;
+    let x=Math.min(innerWidth-w-12,Math.max(12,r.left+r.width/2-w/2)),y=r.top-h-10;if(y<76)y=r.bottom+10;tip.style.left=x+'px';tip.style.top=y+'px';};
+  const hide=()=>{if(cur){cur.classList.remove('act');cur.removeAttribute('aria-describedby');}cur=null;tip.classList.remove('on');};
+  $$('abbr.gl').forEach(a=>{a.addEventListener('mouseenter',()=>show(a));a.addEventListener('mouseleave',hide);a.addEventListener('focus',()=>show(a));a.addEventListener('blur',hide);
+    a.addEventListener('click',e=>{e.preventDefault();if(cur===a&&Date.now()-shownAt>350)hide();else show(a);});});
+  addEventListener('scroll',hide,{passive:true});
+}
+// 2. Section navigator (rail on wide screens, popover from the dock elsewhere)
+const secs=$$('section[data-toc][id]');
+let rail=null,toc=null;
+if(secs.length>1){
+  rail=document.createElement('nav');rail.className='rail';rail.setAttribute('aria-label','Sections on this page');
+  rail.innerHTML=secs.map((s,i)=>`<a href="#${s.id}"><i></i><span>${s.dataset.toc}</span></a>`).join('');document.body.appendChild(rail);
+  toc=document.createElement('div');toc.className='toc-pop';toc.id='tocpop';toc.hidden=true;
+  toc.innerHTML=`<p class="kicker">On this page</p><ol>${secs.map(s=>`<li><a href="#${s.id}">${s.dataset.toc}</a></li>`).join('')}</ol>`;
+  const links=[...$$('a',rail),...$$('a',toc)];
+  const spy=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}}),{rootMargin:'-35% 0px -60% 0px'});
+  secs.forEach(s=>spy.observe(s));
+  links.forEach(a=>a.addEventListener('click',()=>{if(toc)toc.hidden=true;}));
+}
+
+// 3. Dock: contents, text size, back to top with progress ring
+const dock=document.createElement('div');dock.className='dock';
+dock.innerHTML=(secs.length>1?`<button type="button" class="dk dk-toc" aria-label="Contents of this page" aria-controls="tocpop" aria-expanded="false">${svg('list')}<span>Contents</span></button>`:'')+
+ `<button type="button" class="dk dk-txt" aria-label="Change text size">${svg('text')}<span class="tx">100%</span></button>`+
+ `<button type="button" class="dk dk-top" aria-label="Back to top"><svg class="ring" viewBox="0 0 44 44"><circle cx="22" cy="22" r="19"/><circle class="pr" cx="22" cy="22" r="19"/></svg>${svg('up')}</button>`;
+document.body.appendChild(dock);if(toc)dock.appendChild(toc);
+const tb=$('.dk-toc',dock);if(tb)tb.onclick=()=>{toc.hidden=!toc.hidden;tb.setAttribute('aria-expanded',!toc.hidden);};
+document.addEventListener('click',e=>{if(toc&&!toc.hidden&&!e.target.closest('.dock')){toc.hidden=true;if(tb)tb.setAttribute('aria-expanded','false');}});
+const sizes=[100,112,125],txt=$('.dk-txt',dock);let si=Math.max(0,sizes.indexOf(+store.get('sv-size')||100));
+const applySize=()=>{document.documentElement.style.fontSize=sizes[si]===100?'':sizes[si]+'%';$('.tx',txt).textContent=sizes[si]+'%';};applySize();
+txt.onclick=()=>{si=(si+1)%sizes.length;store.set('sv-size',sizes[si]);applySize();};
+$('.dk-top',dock).onclick=()=>scrollTo({top:0,behavior:calm?'auto':'smooth'});
+const pr=$('.pr',dock),C=2*Math.PI*19;pr.style.strokeDasharray=C;
+const onS=()=>{const m=document.documentElement.scrollHeight-innerHeight,p=m>0?scrollY/m:0;pr.style.strokeDashoffset=C*(1-p);dock.classList.toggle('show',scrollY>400);};
+addEventListener('scroll',onS,{passive:true});onS();
+
+// 4. Site-wide search palette (Ctrl/⌘ K or /)
+const pal=document.createElement('div');pal.className='pal';pal.hidden=true;pal.setAttribute('role','dialog');pal.setAttribute('aria-modal','true');pal.setAttribute('aria-label','Search the site');
+pal.innerHTML=`<div class="pal-box"><label class="pal-in">${svg('search')}<input type="search" placeholder="Search every page — try “depot”, “CPI” or “farmers”" aria-label="Search the site" autocomplete="off"/><kbd>Esc</kbd></label>
+<ul class="pal-res" role="listbox"></ul><div class="pal-foot"><span><kbd>↑</kbd><kbd>↓</kbd> to move</span><span><kbd>Enter</kbd> to open</span><span class="pal-n"></span></div></div>`;
+document.body.appendChild(pal);
+const pin=$('input',pal),res=$('.pal-res',pal);let sel=0,hits=[],loaded=false,lastFocus=null;
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function load(cb){if(window.SV_INDEX)return cb();if(loaded)return;loaded=true;const sc=document.createElement('script');sc.src='search-index.js?v='+(document.querySelector('script[src*="app.js"]').src.split('v=')[1]||'1');sc.onload=cb;document.head.appendChild(sc);}
+const SUGGEST=[['simulation.html','','Day 0 simulation','Watch the outbreak with and without Sentinel Valley'],['cost.html','roi','ROI and payback','Does the $1B pay for itself?'],['time.html','the-critical-path','The critical path','The chain that decides the go-live date'],['risk.html','risks','Top 10 risks','Heat map and responses'],['charter.html','','Project charter','Objectives, champion and sign-off']];
+function render(){const q=pin.value.trim().toLowerCase();
+  if(!q){hits=SUGGEST.map(([f,id,h,t])=>({f,id,h,t,p:'Suggested'}));}
+  else{const words=q.split(/\s+/);hits=(window.SV_INDEX||[]).map(e=>{const H=e.h.toLowerCase(),T=e.t.toLowerCase(),P=e.p.toLowerCase();let sc=0;
+      for(const w of words){const a=H.includes(w),b=T.includes(w),c=P.includes(w);if(!a&&!b&&!c)return null;sc+=(a?6:0)+(c?3:0)+(b?1:0)+(H.startsWith(w)?2:0);}
+      if(words.length>1){if(H.includes(q))sc+=15;else if(T.includes(q))sc+=10;}return {...e,sc:sc+(e.top?1:0)};}).filter(Boolean).sort((a,b)=>b.sc-a.sc).slice(0,9);}
+  sel=0;$('.pal-n',pal).textContent=q?hits.length+(hits.length===9?'+':'')+' results':'';
+  const hl=(s,ws)=>{let o=esc(s);ws.forEach(w=>{if(w.length>1)o=o.replace(new RegExp('('+esc(w).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark>$1</mark>');});return o;};
+  const ws=q.split(/\s+/).filter(Boolean);
+  res.innerHTML=hits.length?hits.map((h,i)=>{let snip=h.t;if(ws[0]){const k=h.t.toLowerCase().indexOf(ws[0]);if(k>60)snip='…'+h.t.slice(k-50);}snip=snip.slice(0,150)+(snip.length>150?'…':'');
+    return `<li role="option" id="pr${i}" aria-selected="${i===0}"><a href="${h.f}${h.id?'#'+h.id:''}"><small>${esc(h.p)}</small><b>${hl(h.h,ws)}</b><span>${hl(snip,ws)}</span>${svg('enter')}</a></li>`;}).join('')
+    :`<li class="pal-empty">No matches. Try a shorter word, like “air” or “budget”.</li>`;}
+function mark(){$$('li[role=option]',res).forEach((li,i)=>{li.setAttribute('aria-selected',i===sel);if(i===sel)li.scrollIntoView({block:'nearest'});});}
+function openP(){lastFocus=document.activeElement;pal.hidden=false;document.documentElement.classList.add('pal-open');load(render);render();setTimeout(()=>pin.focus(),20);}
+function closeP(){pal.hidden=true;document.documentElement.classList.remove('pal-open');if(lastFocus&&lastFocus.focus)lastFocus.focus();}
+pin.addEventListener('input',render);
+pin.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){e.preventDefault();sel=Math.min(hits.length-1,sel+1);mark();}else if(e.key==='ArrowUp'){e.preventDefault();sel=Math.max(0,sel-1);mark();}
+  else if(e.key==='Enter'){const a=$(`#pr${sel} a`,res);if(a){e.preventDefault();location.href=a.getAttribute('href');closeP();}}});
+pal.addEventListener('click',e=>{if(e.target===pal)closeP();if(e.target.closest('.pal-res a'))closeP();});
+$$('.hsearch').forEach(b=>b.addEventListener('click',openP));
+
+// 5. Keyboard: Ctrl/⌘K or / to search, Esc to close, ← → for previous / next page
+document.addEventListener('keydown',e=>{const t=e.target,typing=t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
+  if((e.key==='k'||e.key==='K')&&(e.ctrlKey||e.metaKey)){e.preventDefault();pal.hidden?openP():closeP();return;}
+  if(e.key==='Escape'&&!pal.hidden){closeP();return;}
+  if(typing||e.ctrlKey||e.metaKey||e.altKey||!pal.hidden)return;
+  if(e.key==='/'){e.preventDefault();openP();}
+  else if(e.key==='ArrowRight'||e.key==='ArrowLeft'){const a=$(e.key==='ArrowRight'?'.pager .next':'.pager .prev');if(a)location.href=a.href;}});
+
+// 6. Numbers count up when they come into view
+if(!calm&&'IntersectionObserver' in window){
+  const cand=$$('.kpi b, .card .big').filter(b=>{const t=b.textContent,nums=t.match(/\d[\d,]*(\.\d+)?/g);if(!nums||nums.length!==1)return false;
+    const pre=t.slice(0,t.search(/\d/));if(!/^[\s$~≈≥+−-]*$/.test(pre))return false;
+    return !/^(19|20)\d\d$/.test(nums[0]);});
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);const b=e.target,full=b.textContent,m=full.match(/[\d,]+(\.\d+)?/);
+    const v=parseFloat(m[0].replace(/,/g,'')),dec=(m[1]||'').length-1>0?(m[1]||'').length-1:0,comma=m[0].includes(','),pre=full.slice(0,m.index),post=full.slice(m.index+m[0].length);
+    const fmt=x=>{let s=x.toFixed(Math.max(0,dec));if(comma)s=Number(s).toLocaleString('en-US',{minimumFractionDigits:Math.max(0,dec),maximumFractionDigits:Math.max(0,dec)});return pre+s+post;};
+    const t0=performance.now(),D=1100;const step=t=>{const k=Math.min(1,(t-t0)/D),e2=1-Math.pow(1-k,3);b.textContent=fmt(v*e2);if(k<1)requestAnimationFrame(step);else b.textContent=full;};requestAnimationFrame(step);}),{threshold:.6});
+  cand.forEach(b=>io.observe(b));}
+})();
+
 // ===== Depth layer: 3D valley background, hero camera, tilt cards, scroll reveals =====
 (()=>{
 const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
