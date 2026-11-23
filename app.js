@@ -70,8 +70,64 @@ function drawTree(){const tree=document.getElementById('tree');const by={};BUDGE
       c.onclick=c.onfocus=()=>{document.getElementById('detail').innerHTML=`<b>${l.id} ${l.item}</b><br>${l.qty.toLocaleString()} ${l.unit} × ${money(l.unit_cost)} = <b>${money(l.total)}</b> (${p})<br>${l.note||''}`};
       col.appendChild(c)});tree.appendChild(col)});}
 // Day 0 simulation
-function initSim(){const r=document.getElementById('simday');const upd=()=>{const d=+r.value;document.getElementById('daylabel').textContent=d===0?'Day 0':'Day '+d;
-  document.querySelectorAll('.sim li').forEach(li=>li.classList.toggle('shown',+li.dataset.d<=d));};r.oninput=upd;upd();}
+function initSim(){
+  const r=document.getElementById('simday'),NS='http://www.w3.org/2000/svg';
+  // seeded random so both maps look the same on every visit
+  let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646;};
+  const gauss=()=>(rnd()+rnd()+rnd()-1.5)/1.5;
+  const T={Mission:[118,212],Abbotsford:[210,250],'Sumas border':[255,292],'Sumas Prairie':[330,232],Chilliwack:[410,206],Yarrow:[372,262],Agassiz:[468,150],Hope:[560,96]};
+  const FARM=[395,236],LAB=[452,226],DEPOT=[300,214];
+  // without: spread grows ~0.06·d^2.2, seeding new towns as the story moves on
+  const then=[{b:0,x:FARM[0],y:FARM[1]}];for(let i=1;i<=200;i++){const b=Math.pow(i/0.06,1/2.2);let c;
+    if(b<9)c=FARM;else if(b<21)c=rnd()<.7?T.Chilliwack:T.Yarrow;else{const k=['Abbotsford','Mission','Chilliwack','Abbotsford','Sumas Prairie','Agassiz','Hope','Mission'][Math.floor(rnd()*8)];c=T[k];}
+    const s=b<9?10:b<21?20:30;then.push({b,x:c[0]+gauss()*s,y:c[1]+gauss()*s*.7});}
+  const now=[[0,0,0],[1,10,-6],[2,-9,5],[3,6,9],[3,-12,-4],[4,14,4]].map(([b,dx,dy])=>({b,x:FARM[0]+dx,y:FARM[1]+dy}));
+  const base=`<svg viewBox="0 0 640 340" preserveAspectRatio="xMidYMid meet"><defs><radialGradient id="glw" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#E39B2E" stop-opacity=".55"/><stop offset="1" stop-color="#E39B2E" stop-opacity="0"/></radialGradient></defs>
+<rect width="640" height="340" fill="#0F2A3A"/>${[60,100,140,180,220,260,300].map((y,i)=>`<path d="M0 ${y} C 160 ${y-20}, 300 ${y+40+i*4}, 640 ${y-60}" fill="none" stroke="#1F4659" stroke-width="1"/>`).join('')}
+<path d="M0 230 C 120 200, 190 235, 280 215 S 420 170, 470 150 S 560 110, 640 70" fill="none" stroke="#3F86A8" stroke-width="7" stroke-linecap="round" opacity=".85"/>
+<line x1="0" x2="640" y1="318" y2="318" stroke="#E39B2E" stroke-dasharray="6 5" stroke-width="1.2" opacity=".7"/><text x="12" y="333" fill="#C9A86B" font-size="10">Canada–U.S. border</text>
+${Object.entries(T).map(([n,[x,y]])=>`<circle cx="${x}" cy="${y}" r="3" fill="#9FC3D3"/><text x="${x+6}" y="${y-6}" fill="#CFE0E6" font-size="11.5" font-weight="600">${n}</text>`).join('')}</svg>`;
+  const maps={};
+  document.querySelectorAll('.vmap').forEach(m=>{m.innerHTML=base;const svg=m.firstChild,lane=m.dataset.lane,g=document.createElementNS(NS,'g');svg.appendChild(g);
+    const pts=(lane==='then'?then:now).map(p=>{const c=document.createElementNS(NS,'circle');c.setAttribute('cx',p.x.toFixed(1));c.setAttribute('cy',p.y.toFixed(1));c.setAttribute('r',lane==='then'?3.4:4.2);c.setAttribute('class','dot');g.appendChild(c);return {...p,el:c};});
+    const extra={};
+    if(lane==='now'){ // sentinel network, lab, depot, containment ring, supply route
+      g.insertAdjacentHTML('afterbegin',Object.values(T).map(([x,y])=>`<g class="sent"><circle cx="${x}" cy="${y}" r="9" fill="none" stroke="#E39B2E" stroke-width="1.4"/><circle cx="${x}" cy="${y}" r="2.2" fill="#E39B2E"/></g>`).join('')+
+        `<path class="route" d="M${DEPOT[0]} ${DEPOT[1]} Q 350 260 ${FARM[0]} ${FARM[1]}" fill="none" stroke="#E39B2E" stroke-width="2.4" stroke-dasharray="6 6"/>
+<g class="depot"><rect x="${DEPOT[0]-11}" y="${DEPOT[1]-9}" width="22" height="18" rx="3" fill="#A8792E"/><text x="${DEPOT[0]}" y="${DEPOT[1]+24}" fill="#E8C58A" font-size="10" text-anchor="middle" font-weight="700">DEPOT</text></g>
+<g class="lab"><rect x="${LAB[0]-9}" y="${LAB[1]-9}" width="18" height="18" rx="9" fill="#2F6B4F" stroke="#9FE0BF" stroke-width="1.5"/><text x="${LAB[0]+14}" y="${LAB[1]+4}" fill="#9FE0BF" font-size="10" font-weight="700">LAB</text></g>
+<circle class="ring" cx="${FARM[0]}" cy="${FARM[1]}" r="34" fill="none" stroke="#5FD39A" stroke-width="2.5" stroke-dasharray="5 4"/>
+<circle class="pulse-r" cx="${FARM[0]}" cy="${FARM[1]}" r="10" fill="url(#glw)"/>`);
+      extra.route=g.querySelector('.route');extra.depot=g.querySelector('.depot');extra.lab=g.querySelector('.lab');extra.ring=g.querySelector('.ring');extra.pulse=g.querySelector('.pulse-r');}
+    else{g.insertAdjacentHTML('afterbegin',`<circle class="haze" cx="${T.Chilliwack[0]}" cy="${T.Chilliwack[1]}" r="10" fill="#B3261E" opacity="0"/>`);extra.haze=g.querySelector('.haze');}
+    maps[lane]={pts,extra};});
+  const ST={then:[[0,'Undetected',2],[9,'Unexplained cluster',2],[14,'Awaiting lab results',2],[21,'Spreading in community',4],[30,'Supplies running short',4],[40,'Regional lockdown',5]],
+            now:[[0,'Signal flagged',2],[1,'Confirmed: new H5 variant',3],[2,'Case isolated',3],[3,'Response chosen',3],[5,'Targeted testing',2],[9,'No community spread',1],[40,'Contained',1]]};
+  const ticks=document.getElementById('simticks');
+  if(ticks){const seen={};document.querySelectorAll('.sim li[data-d]').forEach(li=>{const d=+li.dataset.d,lane=li.closest('.then')?'then':'now',k=d+lane;if(seen[k])return;seen[k]=1;
+    const b=document.createElement('button');b.type='button';b.className='tick '+lane;b.style.left=(d/40*100)+'%';b.title=(lane==='then'?'Without':'With')+' · Day '+d;b.setAttribute('aria-label','Jump to day '+d);
+    b.onclick=()=>{stop();r.value=d;upd();};ticks.appendChild(b);});}
+  const pill=[...document.querySelectorAll('.mc-pillars span')],out=document.getElementById('outcome');
+  function upd(){const d=+r.value;document.getElementById('daylabel').textContent='Day '+d;r.style.setProperty('--fill',(d/40*100)+'%');
+    ['then','now'].forEach(lane=>{const lis=[...document.querySelectorAll('.'+lane+' li[data-d]')];let cur=null;
+      lis.forEach(li=>{const on=+li.dataset.d<=d;li.classList.toggle('shown',on);if(on)cur=li;});lis.forEach(li=>li.classList.toggle('cur',li===cur));
+      const s=ST[lane].filter(x=>x[0]<=d).pop(),st=document.getElementById('st-'+lane),mt=document.getElementById('mt-'+lane);
+      if(st){st.textContent=s[1];st.dataset.lv=s[2];}if(mt)mt.style.setProperty('--lv',s[2]);
+      const M=maps[lane];if(!M)return;
+      M.pts.forEach(p=>{const on=p.b<=d;p.el.classList.toggle('on',on);p.el.classList.toggle('ok',lane==='now'&&d>=9);});
+      if(lane==='then')M.extra.haze.setAttribute('r',d<9?0:Math.min(230,(d-8)*7)),M.extra.haze.setAttribute('opacity',d<9?0:.16);
+      else{const e=M.extra;e.lab.classList.toggle('on',d>=1);e.route.classList.toggle('on',d>=5);e.depot.classList.toggle('on',d>=5);e.ring.classList.toggle('on',d>=9);e.pulse.classList.toggle('on',d<9);}});
+    pill.forEach(p=>p.classList.toggle('on',d>=+p.dataset.on));
+    if(out)out.classList.toggle('done',d>=40);}
+  // playback
+  let timer=0,speed=1;const btn=document.getElementById('simplay');
+  function stop(){clearInterval(timer);timer=0;if(btn){btn.classList.remove('on');btn.querySelector('span').textContent=+r.value>=40?'Replay':'Play';btn.setAttribute('aria-label','Play simulation');}}
+  function play(){if(+r.value>=40)r.value=0;upd();btn.classList.add('on');btn.querySelector('span').textContent='Pause';btn.setAttribute('aria-label','Pause simulation');
+    timer=setInterval(()=>{r.value=Math.min(40,+r.value+1);upd();if(+r.value>=40)stop();},420/speed);}
+  if(btn)btn.onclick=()=>timer?stop():play();
+  const rs=document.getElementById('simreset');if(rs)rs.onclick=()=>{stop();r.value=0;upd();btn.querySelector('span').textContent='Play';};
+  document.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{speed=+b.dataset.sp;document.querySelectorAll('[data-sp]').forEach(x=>x.setAttribute('aria-pressed',x===b));if(timer){stop();play();}});
+  r.oninput=()=>{stop();upd();};upd();}
 
 // ===== Navigation: chapter drop-downs, mobile menu, reading progress, bar fills =====
 (()=>{
@@ -106,9 +162,15 @@ function run(){const term=q.value.trim().toLowerCase();let n=0;
     const p=c.querySelector('.rapa');p.innerHTML=re&&ok?c._html.replace(re,'<mark>$1</mark>'):c._html;});
   groups.forEach(g=>{const vis=!!g.querySelector('.rcard:not([hidden])');g.hidden=!vis;
     const a=document.querySelector(`[data-jump="${g.dataset.letter}"]`);if(a)a.classList.toggle('off',!vis);});
-  shown.textContent=n;none.hidden=n>0;}
+  shown.textContent=n;none.hidden=n>0;
+  const chip=chips.find(x=>x.dataset.rf===cat),what=document.getElementById('rwhat');
+  if(what)what.innerHTML=(cat==='all'?'':'· <b style="color:'+getComputedStyle(chip).getPropertyValue('--c')+'">'+chip.childNodes[chip.childNodes.length-2].textContent.trim()+' only</b>')+(term?' · matching “'+term.replace(/</g,'&lt;')+'”':'');
+  // make sure newly shown cards are visible even if their scroll-reveal hasn't fired
+  cards.forEach(c=>{if(!c.hidden&&c.classList.contains('fx-reveal'))c.classList.add('in');});}
 q.addEventListener('input',run);
-chips.forEach(b=>b.addEventListener('click',()=>{cat=b.dataset.rf;chips.forEach(x=>x.setAttribute('aria-pressed',x===b));run();}));
+const tools=document.querySelector('.rtools');
+chips.forEach(b=>b.addEventListener('click',()=>{cat=b.dataset.rf;chips.forEach(x=>x.setAttribute('aria-pressed',x===b));run();
+  const top=list.getBoundingClientRect().top+scrollY-(tools?tools.offsetHeight:0)-90;if(scrollY>top+40||list.getBoundingClientRect().top>innerHeight*.6)scrollTo({top,behavior:'smooth'});}));
 document.querySelectorAll('[data-jump]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();
   const g=list.querySelector(`[data-letter="${a.dataset.jump}"]`);if(g)g.scrollIntoView({behavior:'smooth'});}));
 })();
