@@ -93,6 +93,26 @@ if('IntersectionObserver' in window&&!matchMedia('(prefers-reduced-motion: reduc
   document.querySelectorAll('.bars').forEach(b=>{b.classList.add('fx-pre');io.observe(b);});}
 })();
 
+// ===== Evidence library: search, type filter, A–Z jump =====
+(()=>{const list=document.getElementById('reflist');if(!list)return;
+const q=document.getElementById('rq'),shown=document.getElementById('rshown'),none=document.querySelector('.rnone');
+const cards=[...list.querySelectorAll('.rcard')],groups=[...list.querySelectorAll('.rgroup')],chips=[...document.querySelectorAll('[data-rf]')];
+cards.forEach(c=>{const p=c.querySelector('.rapa');c._html=p.innerHTML;c._text=p.textContent.toLowerCase();});
+let cat='all';
+const escRe=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+function run(){const term=q.value.trim().toLowerCase();let n=0;
+  const re=term?new RegExp('('+escRe(term)+')(?![^<]*>)','gi'):null;
+  cards.forEach(c=>{const ok=(cat==='all'||c.dataset.cat===cat)&&(!term||c._text.includes(term));c.hidden=!ok;if(ok)n++;
+    const p=c.querySelector('.rapa');p.innerHTML=re&&ok?c._html.replace(re,'<mark>$1</mark>'):c._html;});
+  groups.forEach(g=>{const vis=!!g.querySelector('.rcard:not([hidden])');g.hidden=!vis;
+    const a=document.querySelector(`[data-jump="${g.dataset.letter}"]`);if(a)a.classList.toggle('off',!vis);});
+  shown.textContent=n;none.hidden=n>0;}
+q.addEventListener('input',run);
+chips.forEach(b=>b.addEventListener('click',()=>{cat=b.dataset.rf;chips.forEach(x=>x.setAttribute('aria-pressed',x===b));run();}));
+document.querySelectorAll('[data-jump]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();
+  const g=list.querySelector(`[data-letter="${a.dataset.jump}"]`);if(g)g.scrollIntoView({behavior:'smooth'});}));
+})();
+
 // ===== Depth layer: 3D valley background, hero camera, tilt cards, scroll reveals =====
 (()=>{
 const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
