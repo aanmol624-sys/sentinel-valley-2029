@@ -395,3 +395,13 @@ if(!calm&&fine)document.querySelectorAll('.card:not(.static), .pillars>div, .til
     el.style.setProperty('--gx',(x*100).toFixed(1)+'%');el.style.setProperty('--gy',(y*100).toFixed(1)+'%');});
   el.addEventListener('pointerleave',()=>{el.classList.remove('hot');el.style.transform='';});});
 })();
+
+// ===== Footer mission clock: live countdown to start, go-live and close =====
+(()=>{const box=document.querySelector('.f-count');if(!box)return;
+const D=s=>new Date(s+'T00:00:00'),now=new Date(),S=D('2027-01-04'),G=D('2029-10-01'),C=D('2029-12-31');
+const left=d=>Math.ceil((d-now)/864e5);
+[['start',S,'days to project start','project started'],['live',G,'days to go-live','network live'],['close',C,'days to formal close','project closed']].forEach(([k,d,todo,done])=>{
+  const el=box.querySelector('[data-k='+k+']');if(!el)return;const n=left(d);
+  el.querySelector('b').textContent=n>0?n.toLocaleString('en-US'):'\u2713';el.querySelector('small').textContent=n>0?todo:done;});
+box.style.setProperty('--prog',(Math.min(1,Math.max(0,(now-S)/(C-S)))*100).toFixed(2)+'%');
+const st=box.querySelector('.f-state');if(st)st.textContent=now<S?'Proposal stage':now<G?'Building the network':now<C?'Live \u00b7 closing out':'Project closed';})();
